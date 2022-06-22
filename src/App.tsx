@@ -34,7 +34,7 @@ const Ball = ({ mass = 1, color = "red", ...props }: BallProps) => {
   useEffect(() => {
     const unsub = api.position.subscribe(([x, y]) => {
       api.applyForce([x < 0 ? 1 : -1, y < 0 ? 1 : -1], [0, 0]);
-      ref.current?.scale.addScalar(.001);
+      //ref.current?.scale.addScalar(.001);
     });
     return unsub;
   }, [api]);

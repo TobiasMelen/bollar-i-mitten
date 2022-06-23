@@ -1,18 +1,25 @@
 import { Canvas, MeshProps, useFrame } from "@react-three/fiber";
-import { Duplet, Physics, useCircle } from "@react-three/p2";
-import { useEffect } from "react";
-import { Color } from "three";
+import { Duplet, Physics, useBox, useCircle } from "@react-three/p2";
+import { useEffect, useRef, useState } from "react";
+import { Color, SphereGeometry } from "three";
+
+const gravity = 2;
+const centerGravityForce = (pos: number) => {
+  const force = Math.max(Math.abs(pos), 1) * gravity;
+  return pos > 0 ? -force : force;
+};
 
 function App() {
   return (
     <Canvas>
       <ambientLight intensity={0.5} />
-      <pointLight position={[1, 1, 2]} intensity={2} />
-      <Physics gravity={[0, 0]} normalIndex={2}>
-        <Ball position={[-3, 2]} color="green" />
-        <Ball />
-        <Ball position={[2.5, 2]} color="blue" />
-        <Ball position={[5, 5]} color="hotpink" />
+      <pointLight position={[0.5, 2, 3]} intensity={2} />
+      <Physics gravity={[0, 0]} normalIndex={2} stepSize={0.005}>
+        <Object position={[-3, 2]} color="green" />
+        <Object />
+        <Object position={[2.5, 2]} color="blue" type="box" />
+        <Object position={[0, -10]} color="hotpink" />
+        <Object position={[5, 5]} color="yellow" />
       </Physics>
     </Canvas>
   );
@@ -24,24 +31,57 @@ type BallProps = Omit<MeshProps, "position"> & {
   mass?: number;
   color?: Color | string;
   position?: Duplet;
+  type?: "ball" | "box";
 };
 
-const Ball = ({ mass = 1, color = "red", ...props }: BallProps) => {
-  const [ref, api] = useCircle(() => ({
-    mass,
-    position: props.position,
-  }));
+const Object = ({
+  type = "ball",
+  mass = 1,
+  color = "red",
+  ...props
+}: BallProps) => {
+  const [size, setSize] = useState(1);
+  const prevPos = useRef<Duplet>();
+  const [ref, api] = (type === "box" ? useBox : useCircle)(
+    () => {
+      return {
+        mass: (mass * (size * 10)) / 10,
+        position: prevPos.current ?? props.position,
+        args: [size, size],
+      };
+    },
+    null,
+    [size]
+  );
   useEffect(() => {
-    const unsub = api.position.subscribe(([x, y]) => {
-      api.applyForce([x < 0 ? 1 : -1, y < 0 ? 1 : -1], [0, 0]);
+    const unsub = api.position.subscribe((pos) => {
+      prevPos.current = pos;
+      api.applyForce(
+        [centerGravityForce(pos[0]) * mass, centerGravityForce(pos[1]) * mass],
+        [0, 0]
+      );
+
       //ref.current?.scale.addScalar(.001);
+      //sphereRef.current?.scale(1.001, 1.001, 1.001);
     });
     return unsub;
   }, [api]);
+  const grow = () => {
+    setSize((size) => size + 0.1);
+  };
   return (
     //@ts-ignore
-    <mesh {...props} ref={ref}>
-      <sphereGeometry args={[1, 64, 32]} />
+    <mesh
+      {...props}
+      position={prevPos?.current && [...prevPos.current, 0]}
+      ref={ref}
+      onClick={grow}
+    >
+      {type === "box" ? (
+        <boxGeometry args={[size, size, 1]} />
+      ) : (
+        <sphereGeometry args={[size, 64, 32]} />
+      )}
       <meshPhongMaterial color={color} shininess={500} />
     </mesh>
   );

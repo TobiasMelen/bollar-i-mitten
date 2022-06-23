@@ -1,7 +1,7 @@
-import { Canvas, MeshProps, useFrame } from "@react-three/fiber";
+import { Canvas, MeshProps } from "@react-three/fiber";
 import { Duplet, Physics, useBox, useCircle } from "@react-three/p2";
-import { useEffect, useRef, useState } from "react";
-import { Color, SphereGeometry } from "three";
+import { RefObject, useEffect, useRef, useState } from "react";
+import { Color, Mesh } from "three";
 
 const gravity = 2;
 const centerGravityForce = (pos: number) => {
@@ -43,6 +43,7 @@ const Object = ({
   const [size, setSize] = useState(1);
   const prevPos = useRef<Duplet>();
   const [ref, api] = (type === "box" ? useBox : useCircle)(
+    //@ts-ignore
     () => {
       return {
         mass: (mass * (size * 10)) / 10,
@@ -74,7 +75,7 @@ const Object = ({
     <mesh
       {...props}
       position={prevPos?.current && [...prevPos.current, 0]}
-      ref={ref}
+      ref={ref as RefObject<Mesh>}
       onClick={grow}
     >
       {type === "box" ? (

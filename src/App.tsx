@@ -1,9 +1,9 @@
 import { Canvas, MeshProps } from "@react-three/fiber";
 import { Duplet, Physics, useBox, useCircle } from "@react-three/p2";
-import { RefObject, useEffect, useRef, useState } from "react";
+import { RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { Color, Mesh } from "three";
 
-const gravity = 2;
+const gravity = 5;
 const centerGravityForce = (pos: number) => {
   const force = Math.max(Math.abs(pos), 1) * gravity;
   return pos > 0 ? -force : force;
@@ -28,7 +28,7 @@ function App() {
 export default App;
 
 type BallProps = Omit<MeshProps, "position"> & {
-  mass?: number;
+  initialMass?: number;
   color?: Color | string;
   position?: Duplet;
   type?: "ball" | "box";
@@ -36,17 +36,19 @@ type BallProps = Omit<MeshProps, "position"> & {
 
 const Object = ({
   type = "ball",
-  mass = 1,
+  initialMass = 1,
   color = "red",
   ...props
 }: BallProps) => {
   const [size, setSize] = useState(1);
   const prevPos = useRef<Duplet>();
+  const mass = useRef<number>(0);
   const [ref, api] = (type === "box" ? useBox : useCircle)(
     //@ts-ignore
     () => {
+      mass.current = initialMass * (Math.pow(size, 10));
       return {
-        mass: (mass * (size * 10)) / 10,
+        mass: mass.current,
         position: prevPos.current ?? props.position,
         args: [size, size],
       };
@@ -58,7 +60,7 @@ const Object = ({
     const unsub = api.position.subscribe((pos) => {
       prevPos.current = pos;
       api.applyForce(
-        [centerGravityForce(pos[0]) * mass, centerGravityForce(pos[1]) * mass],
+        [centerGravityForce(pos[0]) * mass.current, centerGravityForce(pos[1]) * mass.current],
         [0, 0]
       );
 
